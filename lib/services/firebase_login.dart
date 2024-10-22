@@ -94,7 +94,7 @@ class FirebaseLogin extends StatelessWidget {
                             ),
                           ),
                           child: const Text(
-                            "Google Sign IN",
+                            "Google Sign In",
                             style: TextStyle(
                               color: Colors.white,
                               letterSpacing: 0.7,
