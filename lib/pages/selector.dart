@@ -18,7 +18,7 @@ class Selector extends StatelessWidget {
             title: Text(d['data'][index]['name']),
             subtitle: Text('${d['data'][index]['lat']}, ${d['data'][index]['lon']}, ${d['data'][index]['country']}, ${d['data'][index]['state']}'),
             onTap: () {
-              Navigator.pushReplacementNamed(context, '/', arguments: {'lat': d['data'][index]['lat'], 'lon': d['data'][index]['lon']});
+              Navigator.pushReplacementNamed(context, '/loadingweatherdata', arguments: {'lat': d['data'][index]['lat'], 'lon': d['data'][index]['lon']});
               print('Tapped on ${d['data'][index]['name']}');
             },
           );

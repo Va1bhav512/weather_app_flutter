@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:intl/intl.dart';
+import 'package:weather_app_flutter/services/firebase_login.dart';
 import 'package:weather_app_flutter/services/open_weather_api.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:weather_app_flutter/auth.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -16,6 +18,7 @@ class _HomeState extends State<Home> {
   final TextEditingController textEditingController = TextEditingController();
   final OpenWeatherApi openWeatherApi = OpenWeatherApi();
   late final MapController mapController;
+  final AuthService _auth = AuthService();
 
   @override
   void initState() {
@@ -67,7 +70,8 @@ class _HomeState extends State<Home> {
   }
 
   void _updateMapFromData() {
-    final data = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final data =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final lat = data?['data']?['coord']?['lat']?.toDouble();
     final lon = data?['data']?['coord']?['lon']?.toDouble();
     if (lat != null && lon != null) {
@@ -80,12 +84,13 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> d =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ??
+            {};
 
     // Safely extracting necessary data from the map
     final String cityName = d['data']?['name'] ?? 'Unknown City';
     final double temperature =
-    ((d['data']?['main']?['temp'] ?? 273.15) - 273.15);
+        ((d['data']?['main']?['temp'] ?? 273.15) - 273.15);
     final String weatherMain = d['data']?['weather']?[0]?['main'] ?? 'No Data';
     final String weatherDescription =
         d['data']?['weather']?[0]?['description'] ?? 'No Data';
@@ -267,7 +272,8 @@ class _HomeState extends State<Home> {
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                             userAgentPackageName: 'com.example.app',
                             tileProvider: NetworkTileProvider(),
                             maxZoom: 18,
@@ -277,8 +283,10 @@ class _HomeState extends State<Home> {
                             markers: [
                               Marker(
                                 point: LatLng(
-                                  d['data']?['coord']?['lat']?.toDouble() ?? 28.644800,
-                                  d['data']?['coord']?['lon']?.toDouble() ?? 77.216721,
+                                  d['data']?['coord']?['lat']?.toDouble() ??
+                                      28.644800,
+                                  d['data']?['coord']?['lon']?.toDouble() ??
+                                      77.216721,
                                 ),
                                 width: 80,
                                 height: 80,
@@ -321,7 +329,8 @@ class _HomeState extends State<Home> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text('Visibility: ${(d['data']?['visibility'] ?? 0) / 1000} km'),
+                      Text(
+                          'Visibility: ${(d['data']?['visibility'] ?? 0) / 1000} km'),
                       if (d['data']?['rain']?['1h'] != null)
                         Text('Rain (1h): ${d['data']?['rain']?['1h']} mm'),
                       if (d['data']?['snow']?['1h'] != null)
@@ -333,6 +342,17 @@ class _HomeState extends State<Home> {
             ],
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await _auth.signOut();
+          // Navigator.pushReplacementNamed(context, '/login');
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => FirebaseLogin()),
+            (Route<dynamic> route) => false,
+          );
+        },
+        child: const Icon(Icons.logout),
       ),
     );
   }
