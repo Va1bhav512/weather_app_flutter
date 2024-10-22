@@ -1,41 +1,199 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:weather_app_flutter/services/firebase_login.dart';
 import 'package:weather_app_flutter/services/open_weather_api.dart';
 import 'package:weather_app_flutter/auth.dart';
+
+Future<List<String>> getUserData() async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  User? user = FirebaseAuth.instance.currentUser;
+  String userId = user?.uid ?? '';
+  DocumentSnapshot userDoc = await firestore.collection('users').doc(userId).get();
+  List<String> userData = List.from(userDoc['userdata'] ?? []);
+  return userData;
+}
 
 Icon getWeatherIcon(String weatherMain, double temperature) {
   if (weatherMain.toLowerCase().contains('rain')) {
     return const Icon(
-      Icons.beach_access, // Rainy icon
+      Icons.beach_access,
       size: 48,
       color: Colors.blue,
     );
   } else if (weatherMain.toLowerCase().contains('cloud')) {
     return const Icon(
-      Icons.cloud, // Cloudy icon
+      Icons.cloud,
       size: 48,
       color: Colors.grey,
     );
   } else if (temperature > 30) {
     return const Icon(
-      Icons.wb_sunny, // Hot weather icon
+      Icons.wb_sunny,
       size: 48,
       color: Colors.orange,
     );
   } else if (temperature < 10) {
     return const Icon(
-      Icons.ac_unit, // Cold weather icon
+      Icons.ac_unit,
       size: 48,
       color: Colors.lightBlue,
     );
   } else {
     return const Icon(
-      Icons.wb_sunny, // Default sunny icon
+      Icons.wb_sunny,
       size: 48,
       color: Colors.yellow,
+    );
+  }
+}
+
+// Search Bar Widget with History
+class SearchBarWithHistory extends StatefulWidget {
+  final TextEditingController controller;
+  final Function(String) onSearch;
+
+  const SearchBarWithHistory({
+    Key? key,
+    required this.controller,
+    required this.onSearch,
+  }) : super(key: key);
+
+  @override
+  State<SearchBarWithHistory> createState() => _SearchBarWithHistoryState();
+}
+
+class _SearchBarWithHistoryState extends State<SearchBarWithHistory> {
+  List<String> searchHistory = [];
+  bool isSearching = false;
+  final GlobalKey searchFieldKey = GlobalKey();
+  OverlayEntry? _overlayEntry;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSearchHistory();
+    widget.controller.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _removeOverlay();
+    widget.controller.removeListener(_onSearchChanged);
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    if (widget.controller.text.isEmpty) {
+      _removeOverlay();
+      setState(() => isSearching = false);
+    } else {
+      setState(() => isSearching = true);
+      _showOverlay();
+    }
+  }
+
+  Future<void> _loadSearchHistory() async {
+    searchHistory = await getUserData();
+    setState(() {});
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  void _showOverlay() {
+    _removeOverlay();
+
+    // Get the RenderBox of the search field
+    final RenderBox? renderBox = 
+        searchFieldKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    // Get the position of the search field
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    final Size size = renderBox.size;
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: offset.dy + size.height + 5,
+        left: offset.dx,
+        width: size.width,
+        child: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            constraints: const BoxConstraints(
+              maxHeight: 200,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: searchHistory.length,
+              itemBuilder: (context, index) {
+                final historyItem = searchHistory[index];
+                if (historyItem.toLowerCase().contains(
+                      widget.controller.text.toLowerCase(),
+                    )) {
+                  return ListTile(
+                    title: Text(historyItem),
+                    onTap: () {
+                      widget.controller.text = historyItem;
+                      widget.onSearch(historyItem);
+                      _removeOverlay();
+                    },
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: searchFieldKey,
+      child: TextField(
+        controller: widget.controller,
+        onTap: () {
+          if (widget.controller.text.isNotEmpty) {
+            _showOverlay();
+          }
+        },
+        decoration: InputDecoration(
+          hintText: 'Search location',
+          border: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(22.0)),
+          ),
+          filled: true,
+          fillColor: Colors.white70,
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              widget.onSearch(widget.controller.text);
+              _removeOverlay();
+            },
+          ),
+        ),
+        onSubmitted: (value) {
+          widget.onSearch(value);
+          _removeOverlay();
+        },
+      ),
     );
   }
 }
@@ -94,6 +252,7 @@ class _HomeState extends State<Home> {
   void _updateMapFromData() {
     final data =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
     final lat = data?['data']?['coord']?['lat']?.toDouble();
     final lon = data?['data']?['coord']?['lon']?.toDouble();
     if (lat != null && lon != null) {
@@ -106,10 +265,8 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> d =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ??
-            {};
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
 
-    // Safely extracting necessary data from the map
     final String cityName = d['data']?['name'] ?? 'Unknown City';
     final double temperature =
         ((d['data']?['main']?['temp'] ?? 273.15) - 273.15);
@@ -132,33 +289,20 @@ class _HomeState extends State<Home> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 15.0),
             child: SizedBox(
-              width: 200,
-              child: TextField(
+              width: 250,
+              child: SearchBarWithHistory(
                 controller: textEditingController,
-                decoration: const InputDecoration(
-                  hintText: 'Search location',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(22.0)),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white70,
-                ),
+                onSearch: (query) {
+                  Navigator.pushReplacementNamed(
+                    context,
+                    '/loading',
+                    arguments: {'query': query},
+                  );
+                },
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15.0),
-            child: IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () {
-                Navigator.pushReplacementNamed(
-                  context,
-                  '/loading',
-                  arguments: {'query': textEditingController.text},
-                );
-              },
-            ),
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
@@ -167,7 +311,6 @@ class _HomeState extends State<Home> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Location and Basic Weather Info Card
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(
@@ -178,7 +321,6 @@ class _HomeState extends State<Home> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // City and Country
                       Text(
                         '$cityName, $country',
                         style: const TextStyle(
@@ -189,8 +331,6 @@ class _HomeState extends State<Home> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 8),
-
-                      // Temperature and Weather Main
                       Row(
                         children: [
                           Expanded(
@@ -215,18 +355,9 @@ class _HomeState extends State<Home> {
                             ),
                           ),
                           getWeatherIcon(weatherMain, temperature),
-                          // Optional Icon for weather condition
-                      //     Icon(
-                      //       Icons
-                      //           .wb_sunny, // Replace with appropriate icon based on weather
-                      //       size: 48,
-                      //       color: Colors.orange,
-                      //     ),
                         ],
                       ),
                       const SizedBox(height: 8),
-
-                      // Weather Description
                       Text(
                         weatherDescription,
                         style: const TextStyle(
@@ -235,8 +366,6 @@ class _HomeState extends State<Home> {
                         ),
                       ),
                       const SizedBox(height: 8),
-
-                      // Additional Info (if needed)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -260,10 +389,8 @@ class _HomeState extends State<Home> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 16),
 
-              // Weather Details Card
               Card(
                 elevation: 4,
                 shape: RoundedRectangleBorder(
@@ -325,7 +452,6 @@ class _HomeState extends State<Home> {
               ),
               const SizedBox(height: 16),
 
-              // Map Section in Card
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(
@@ -352,29 +478,18 @@ class _HomeState extends State<Home> {
                             markers: [
                               Marker(
                                 point: LatLng(
-                                  d['data']?['coord']?['lat']?.toDouble() ??
-                                      28.644800,
-                                  d['data']?['coord']?['lon']?.toDouble() ??
-                                      77.216721,
+                                  d['data']?['coord']?['lat']?.toDouble() ?? 28.644800,
+                                  d['data']?['coord']?['lon']?.toDouble() ?? 77.216721,
                                 ),
                                 child: const Icon(
-                                  Icons.location_pin,
+                                  Icons.location_on,
                                   color: Colors.red,
-                                  size: 32,
+                                  size: 30,
                                 ),
                               ),
                             ],
                           ),
                         ],
-                      ),
-                      Positioned(
-                        right: 8,
-                        bottom: 8,
-                        child: FloatingActionButton.small(
-                          onPressed: _updateMapFromData,
-                          backgroundColor: Colors.lightBlue[700],
-                          child: const Icon(Icons.my_location),
-                        ),
                       ),
                     ],
                   ),
@@ -382,7 +497,6 @@ class _HomeState extends State<Home> {
               ),
               const SizedBox(height: 16),
 
-              // Additional Weather Info Card
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(
@@ -405,15 +519,18 @@ class _HomeState extends State<Home> {
                       const SizedBox(height: 8),
                       Text(
                         'Visibility: ${(d['data']?['visibility'] ?? 0) / 1000} km',
-                        style: const TextStyle(
-                            fontSize: 16, color: Colors.black54),
+                        style: const TextStyle(fontSize: 16, color: Colors.black54),
                       ),
                       if (d['data']?['rain']?['1h'] != null)
-                        Text('Rain (1h): ${d['data']?['rain']?['1h']} mm',
-                            style: const TextStyle(color: Colors.black54)),
+                        Text(
+                          'Rain (1h): ${d['data']?['rain']?['1h']} mm',
+                          style: const TextStyle(color: Colors.black54),
+                        ),
                       if (d['data']?['snow']?['1h'] != null)
-                        Text('Snow (1h): ${d['data']?['snow']?['1h']} mm',
-                            style: const TextStyle(color: Colors.black54)),
+                        Text(
+                          'Snow (1h): ${d['data']?['snow']?['1h']} mm',
+                          style: const TextStyle(color: Colors.black54),
+                        ),
                     ],
                   ),
                 ),
@@ -423,13 +540,9 @@ class _HomeState extends State<Home> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        heroTag: null,
         onPressed: () async {
           await _auth.signOut();
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => FirebaseLogin()),
-            (Route<dynamic> route) => false,
-          );
+          Navigator.pushReplacementNamed(context, '/login');
         },
         backgroundColor: Colors.lightBlue[700],
         child: const Icon(Icons.logout),

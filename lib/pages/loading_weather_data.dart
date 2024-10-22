@@ -30,7 +30,8 @@ class _LoadingWeatherDataState extends State<LoadingWeatherData> {
 
     dynamic data = await openWeatherApi.getWeatherData(lat, lon);
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/home', arguments: {'data': data});
+      Navigator.pushReplacementNamed(context, '/home',
+          arguments: {'data': data});
     }
   }
 
