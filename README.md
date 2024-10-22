@@ -6,7 +6,7 @@ You can login using your Google account or use Anonymous sign in.
 
 The default value of the place for weather is set as Delhi. You can search for the place you want using the search bar.
 
-The search bar has a history feature which shows your previous searches. This data is stored in Firebase Database.
+The search bar has a history feature which shows your previous searches. This data is stored in Firestore Database.
 
 ![FirestoreDemo](./demo_assets/Firestore_database.png)
 
