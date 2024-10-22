@@ -10,20 +10,23 @@ class LoadingWeatherData extends StatefulWidget {
 }
 
 class _LoadingWeatherDataState extends State<LoadingWeatherData> {
-  Map<String, dynamic>? d =  {'lat': 28.644800, 'lon': 77.216721};
+  Map<String, dynamic> d = {};
 
   void fetchData() async {
     OpenWeatherApi openWeatherApi = OpenWeatherApi();
     var routeArgs = ModalRoute.of(context)?.settings.arguments;
+
     if (routeArgs != null && routeArgs is Map<String, dynamic>) {
-      d = routeArgs;
-    } else {
-      d = {'lat': 28.644800, 'lon': 77.216721};
+      d = routeArgs; // Assign routeArgs to d
     }
 
-    // Use d['lat'] if it exists, otherwise use def['lat'] default values refer to Delhi
-    double lat = d?['lat'];
-    double lon = d?['lon'];
+    // Check for lat and lon, and add default values if they are missing
+    d.putIfAbsent('lat', () => 28.644800); // Default lat for Delhi
+    d.putIfAbsent('lon', () => 77.216721); // Default lon for Delhi
+
+    // Now use the values in d
+    double lat = d['lat'];
+    double lon = d['lon'];
 
     dynamic data = await openWeatherApi.getWeatherData(lat, lon);
     if (mounted) {
