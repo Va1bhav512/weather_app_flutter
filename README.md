@@ -74,7 +74,7 @@ flutter run
 ```
 
 If you prefer not to build from source then you can use the apk in the appropriate directory
-Or run
+or run
 
 ```bash
 flutter build apk --release
