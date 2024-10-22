@@ -8,7 +8,6 @@ The search bar has a history feature which shows your previous searches. This da
 Search for the place you like and then click it for the home page to be updated accordingly.
 The home page shows current place, its temperature, a map of the location, and some more details. The icons update based on what the weather at the place is (E.g. whether its raining or not)
 The map is scrollable and updated based on the current searched location.
-The map can be reset using the button on the map.
 The floating button can be used to sign out of the app if the user so desires.
 
 ## Development
@@ -37,7 +36,7 @@ cd weather_app_flutter
 mkdir .env
 ```
 
-4.Add your OpenWeatherMap API key:
+4.Add your OpenWeatherMap API key to the .env file:
 
 ```txt
 apiKey = your_api_key_here
@@ -53,4 +52,15 @@ flutter pub get
 
 Follow the official Google Firebase documentation to set up firebase with flutter
 
-You are free to start developing now!
+7.Run the app
+
+```bash
+flutter run
+```
+
+If you prefer not to build from source then you can use the apk in the appropriate directory
+Or run
+
+```bash
+flutter build apk --release
+```
