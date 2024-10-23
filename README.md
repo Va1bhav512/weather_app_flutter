@@ -1,7 +1,7 @@
 # Weather App Flutter
 
 This is my attempt at making a flutter weather app. It implements Firebase as the backend and provides two options for login.
-You can login using your Google account or use Anonymous sign in.
+You can login using your Google account or use Anonymous sign in. **If for some reason app gets stuck at loading after login please quit the app and open again!**
 ![FirebaseDemo](./demo_assets/Firebase_demo.png)
 
 The default value of the place for weather is set as Delhi. You can search for the place you want using the search bar.
